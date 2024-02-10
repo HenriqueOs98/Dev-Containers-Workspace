@@ -1,0 +1,41 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "devcontainer",
+    //"build": {"dockerfile": "Dockerfile"}
+    "remoteEnv": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+    },
+	"dockerComposeFile": "./docker-compose.yml",
+	"service": "devcontainer",
+	"remoteUser": "root",
+	"containerUser": "root",
+    "workspaceFolder": "/workspaces/flask_project", // Add this line
+    "customizations": {
+        "vscode": {
+			"extensions": [
+				"visualstudioexptteam.vscodeintellicode",
+				"donjayamanne.python-extension-pack",
+				"ms-python.python"
+			]
+			
+        }
+    },
+    "postCreateCommand": "apt-get update && apt-get install -y default-mysql-client"
+	/*"features": {
+		"ghcr.io/devcontainers-contrib/features/ruff:1": {}
+	}*/
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "pip3 install --user -r requirements.txt",
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+}
