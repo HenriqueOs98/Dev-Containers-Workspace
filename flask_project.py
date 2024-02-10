@@ -1,25 +1,70 @@
+from flask import Flask, render_template, request
 import html
-from flask import Flask, render_template, request, redirect, Request
+from DBcm import UseDatabase
+
 app = Flask(__name__)
 
-@app.route('/')
-@app.route('/entry')
-def entry_page() -> 'html':
-    return render_template('entry.html', the_title='Welcome to search4letters on the web!')
+app.config['dbconfig'] =  { "host": "127.0.0.1",
+                            "user":"root",
+                            "password": "123",
+                            "database": "database"}
+
+
+
+def log_request(req, res: str) -> None:
+    """Log details of the web request and the results."""
+
+    browser_string = req.user_agent.browser if req.user_agent.browser else ''
+
+    with UseDatabase(app.config['dbconfig']) as cursor:
+        _SQL = """insert into log
+                  (phrase, letters, ip, browser_string, results)
+                  values
+                  (%s, %s, %s, %s, %s)"""
+        cursor.execute(_SQL, (req.form['phrase'],
+                              req.form['letters'],
+                              req.remote_addr,
+                              browser_string,
+                              res, ))
 
 
 @app.route('/search4', methods=['POST'])
-def do_search() -> str:
+def do_search():
+    """Extract the posted data; perform the search; return results."""
     phrase = request.form['phrase']
     letters = request.form['letters']
+    title = 'Here are your results:'
+    results = str(search4letters(phrase, letters))
+    log_request(request, results)
+    return render_template('results.html',
+                           the_title=title,
+                           the_phrase=phrase,
+                           the_letters=letters,
+                           the_results=results,)
 
-    title = "Here are your results!"
-    
-    result = str(search4letters(phrase, letters))
 
-    log_request(request, result)
-        
-    return render_template("results.html", the_title=title,the_results=result, the_phrase=phrase, the_letters = letters)
+@app.route('/')
+@app.route('/entry')
+def entry_page():
+    """Display this webapp's HTML form."""
+    return render_template('entry.html',
+                           the_title='Welcome to search4letters on the web!')
+
+
+@app.route('/viewlog')
+def view_the_log():
+    """Display the contents of the log file as a HTML table."""
+    with UseDatabase(app.config['dbconfig']) as cursor:
+        _SQL = """select phrase, letters, ip, browser_string, results
+                  from log"""
+        cursor.execute(_SQL)
+        contents = cursor.fetchall()
+    titles = ('Phrase', 'Letters', 'Remote_addr', 'User_agent', 'Results')
+    return render_template('viewlog.html',
+                           the_title='View Log',
+                           the_row_titles=titles,
+                           the_data=contents,)
+
 
 def search4letters(phrase: str, letters: str = "aeiou") -> str:
     return set(phrase).intersection(set(letters))
@@ -27,22 +72,7 @@ def search4letters(phrase: str, letters: str = "aeiou") -> str:
 def search4vowels(phrase:str) -> str:
     return set("aeiou").intersection(set(phrase))
 
-def log_request(req: Request, res:str) -> None:
-    with open("vsearch.log", 'a') as log:
-        print(req.form, req.remote_addr, req.user_agent, res, sep="|", file=log)
-        
-@app.route("/viewlog")
-def view_the_log() -> html:
-    with open("vsearch.log", 'r') as log:
-        log_list = list()
-        for line in log:
-            log_list.append(line.split("|"))
 
-    titles = ("Form Data", "Remmote_addr", "User_agent", "Results")
-    return render_template('viewlog.html',
-                            the_title="View Log",
-                            the_row_titles=titles,
-                            the_data=log_list)
 
 if __name__ == "__main__":
     app.run(debug=True)
